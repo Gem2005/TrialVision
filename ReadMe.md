@@ -67,7 +67,7 @@ pip install -r virtualenv.txt  # for installing specific verison of required mod
 
 ## Data Processing
 
-1. Ensure raw data files are in raw
+1. Ensure raw data files are in raw hello 
 
 2. Process data:
 ```bash
