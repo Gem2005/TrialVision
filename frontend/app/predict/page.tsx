@@ -39,6 +39,8 @@ export default function PredictPage() {
     }
   }>(null)
 
+  const [clinicalReport, setClinicalReport] = useState<string | null>(null);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData({
       ...formData,
@@ -51,8 +53,8 @@ export default function PredictPage() {
     setIsLoading(true)
 
     try {
-      // Call the backend API
-      const response = await fetch('http://localhost:8000/predict', {
+      // Call our Next.js API route instead of directly calling the FastAPI backend
+      const response = await fetch('/api/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,19 +63,25 @@ export default function PredictPage() {
       })
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
       
       const data = await response.json()
       setPredictionResult(data)
       setActiveTab("results")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error)
-      // Handle error state here
+      // Show error message to user
+      alert(`Error: ${error.message || "Failed to connect to prediction service"}`);
     } finally {
       setIsLoading(false)
     }
   }
+
+  const handleReportGenerated = (report: string) => {
+    setClinicalReport(report);
+  };
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-5xl">
@@ -251,45 +259,20 @@ export default function PredictPage() {
 
         <TabsContent value="results">
           {predictionResult && (
-            <div className="space-y-6">
-              <PredictionResult result={predictionResult} />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    AI Analysis
-                  </CardTitle>
-                  <CardDescription>Additional insights about your clinical trial from our AI assistant</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChatInterface trialData={formData} predictionResult={predictionResult} />
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setActiveTab("form")}>
-                  Edit Trial Information
-                </Button>
-                <Button
-                  onClick={() => {
-                    setFormData({
-                      study_title: "",
-                      criteria: "",
-                      enrollment: "",
-                      Allocation: "",
-                      Intervention_Model: "",
-                      Masking: "",
-                      Primary_Purpose: "",
-                      intervention: "",
-                      condition: "",
-                    })
-                    setPredictionResult(null)
-                    setActiveTab("form")
-                  }}
-                >
-                  Start New Prediction
-                </Button>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <PredictionResult 
+                  result={predictionResult} 
+                  onReportGenerated={handleReportGenerated}
+                />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium mb-4">Ask AI Assistant</h3>
+                <ChatInterface 
+                  trialData={formData} 
+                  predictionResult={predictionResult} 
+                  clinicalReport={clinicalReport}
+                />
               </div>
             </div>
           )}
