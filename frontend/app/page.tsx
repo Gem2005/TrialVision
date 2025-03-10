@@ -9,7 +9,7 @@ import { FeatureImportanceChart } from "@/components/feature-importance-chart"
 import { ModelComparisonChart } from "@/components/model-comparison-chart"
 import { ShapExplanationChart } from "@/components/shap-explanation-chart"
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background">
@@ -32,7 +32,9 @@ export default function Home() {
               Explanations
             </Link>
           </nav>
-          <Button>Try the Model</Button>
+          <Link href="/predict" className="no-underline">
+            <Button>Try the Model</Button>
+          </Link>
         </div>
       </header>
       <main className="flex-1">
@@ -48,10 +50,12 @@ export default function Home() {
                   explanations for the predictions.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button size="lg">
-                    Explore the Model
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <Link href="/predict" className="no-underline">
+                    <Button size="lg">
+                      Explore the Model
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
                   <Button variant="outline" size="lg">
                     View Documentation
                   </Button>
@@ -324,10 +328,17 @@ export default function Home() {
                 </p>
               </div>
               <div className="mx-auto w-full max-w-sm space-y-2">
-                <Button size="lg" variant="secondary" className="w-full">
-                  Launch Predictor Tool
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                <Link href="/predict" className="no-underline">
+                  <Button size="lg" variant="secondary" className="w-full">
+                    Launch Predictor Tool
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/predict" className="no-underline">
+                  <Button size="lg" className="mt-8">
+                    Try and Explore
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

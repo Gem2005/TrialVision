@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # Add this import
 from pydantic import BaseModel
 import pickle
 import pandas as pd
@@ -13,9 +14,18 @@ app = FastAPI(
     version="1.0"
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Load the trained model and preprocessors
 MODEL_PATH = 'models/random_forest_model.pkl'
-LABEL_ENCODERS_PATH = 'data/processed/label_encoders.pkl'
+LABEL_ENCODERS_PATH = 'data/label_encoders.pkl'
 
 try:
     with open(MODEL_PATH, 'rb') as f:

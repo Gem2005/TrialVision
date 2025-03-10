@@ -30,7 +30,7 @@ The model has predicted that your trial is ${predictionResult.prediction === "Co
 
 ${predictionResult.explanation.top_contributing_features
   .slice(0, 3)
-  .map((feature) => {
+  .map((feature: { feature: string; impact: number }) => {
     const featureName = feature.feature.charAt(0).toUpperCase() + feature.feature.slice(1).replace(/_/g, " ")
     return `• ${featureName}: ${feature.impact > 0 ? "Positive impact" : "Negative impact"} (${Math.abs(feature.impact).toFixed(2)})`
   })
@@ -96,7 +96,7 @@ The algorithm analyzed patterns from thousands of previous clinical trials and i
 For your specific trial:
 
 ${predictionResult.explanation.top_contributing_features
-  .map((feature) => {
+  .map((feature: { feature: string; impact: number }) => {
     const featureName = feature.feature.charAt(0).toUpperCase() + feature.feature.slice(1).replace(/_/g, " ")
     let explanation = ""
 
