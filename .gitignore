@@ -1,0 +1,3 @@
+venv
+data/label_encoder.pkl
+.env
