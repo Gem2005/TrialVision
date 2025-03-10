@@ -1,0 +1,12 @@
+pandas
+scikit-learn
+imblearn
+fastapi
+uvicorn
+shap
+matplotlib
+joblib
+python-multipart
+nltk
+nltk-punkt
+tqdm
