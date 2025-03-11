@@ -26,31 +26,36 @@ export function ChatInterface({ trialData, predictionResult, clinicalReport }: C
 
   // Initialize with a welcome message
   useEffect(() => {
-    if (!predictionResult) return
+    if (!predictionResult) return;
     
     try {
-      const topFeatures = predictionResult?.explanation?.top_contributing_features || [];
+      // Ensure top_contributing_features exists and is an array
+      const topFeatures = Array.isArray(predictionResult?.explanation?.top_contributing_features) 
+        ? predictionResult.explanation.top_contributing_features 
+        : [];
       
       const initialMessage = `Based on my analysis of your clinical trial data, I can provide additional insights.
 
 The model has predicted that your trial is ${predictionResult.prediction === "Completed" ? "likely to complete" : "at risk of not completing"}.
 
-${topFeatures
-  .slice(0, 3)
-  .map((feature: { feature: string; impact: number }) => {
-    const featureName = feature.feature.charAt(0).toUpperCase() + feature.feature.slice(1).replace(/_/g, " ")
-    return `• ${featureName}: ${feature.impact > 0 ? "Positive impact" : "Negative impact"} (${Math.abs(feature.impact).toFixed(2)})`
-  })
-  .join("\n")}
+${topFeatures.length > 0 
+  ? topFeatures
+      .slice(0, 3)
+      .map((feature: { feature: string; impact: number }) => {
+        const featureName = feature.feature.charAt(0).toUpperCase() + feature.feature.slice(1).replace(/_/g, " ")
+        return `• ${featureName}: ${feature.impact > 0 ? "Positive impact" : "Negative impact"} (${Math.abs(feature.impact).toFixed(2)})`
+      })
+      .join("\n")
+  : "No feature impact information is available for this prediction."}
 
-Would you like me to suggest ways to improve the likelihood of completion, or do you have specific questions about the prediction?`
+Would you like me to suggest ways to improve the likelihood of completion, or do you have specific questions about the prediction?`;
 
       setMessages([
         {
           role: "assistant",
           content: initialMessage,
         },
-      ])
+      ]);
     } catch (error) {
       console.error("Error setting initial message:", error);
       setMessages([
@@ -60,102 +65,89 @@ Would you like me to suggest ways to improve the likelihood of completion, or do
         },
       ]);
     }
-  }, [predictionResult])
+  }, [predictionResult]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Update the handleSendMessage function
   const handleSendMessage = async () => {
-    if (!input.trim()) return
-
-    const userMessage = input
-    setInput("")
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }])
-    setIsLoading(true)
-    setError(null)
-
+    if (!input.trim()) return;
+  
+    const userMessage = input;
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsLoading(true);
+  
     try {
-      // Get the Gemini API key from environment variables
-      const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-
-      if (!geminiApiKey) {
-        throw new Error("Gemini API key not configured")
-      }
-
-      // Create a context-rich prompt that includes trial data, prediction results, and the clinical report
-      let prompt = `You are an AI assistant analyzing clinical trial data and providing insights based on a prediction model's results.
-
-CLINICAL TRIAL DATA:
-Study Title: ${trialData.study_title || "Not provided"}
-Condition: ${trialData.condition || "Not provided"}
-Intervention: ${trialData.intervention || "Not provided"}
-Enrollment Size: ${trialData.enrollment || "Not provided"}
-Allocation: ${trialData.Allocation || "Not provided"}
-Intervention Model: ${trialData.Intervention_Model || "Not provided"}
-Masking: ${trialData.Masking || "Not provided"}
-Primary Purpose: ${trialData.Primary_Purpose || "Not provided"}
-
-MODEL PREDICTION:
-Predicted Outcome: ${predictionResult.prediction}
-Interpretation: ${predictionResult.explanation.interpretation || "No interpretation provided"}
-
-TOP CONTRIBUTING FACTORS:
-${predictionResult.explanation.top_contributing_features
-  ?.map((feature: {feature: string; impact: number}) => 
-    `- ${feature.feature}: Impact score ${feature.impact.toFixed(2)}`
-  )
-  .join("\n") || "No factors provided"}
-`
-
-      // Include clinical report in the prompt if available
+      // Build comprehensive prompt with context
+      let prompt = `You are an AI assistant analyzing clinical trial data and providing insights.
+  
+  CLINICAL TRIAL DATA:
+  Study Title: ${trialData.study_title || "Not provided"}
+  Condition: ${trialData.condition || "Not provided"}
+  Intervention: ${trialData.intervention || "Not provided"}
+  Enrollment Size: ${trialData.enrollment || "Not provided"}
+  Allocation: ${trialData.Allocation || "Not provided"}
+  Intervention Model: ${trialData.Intervention_Model || "Not provided"}
+  Masking: ${trialData.Masking || "Not provided"}
+  Primary Purpose: ${trialData.Primary_Purpose || "Not provided"}
+  
+  MODEL PREDICTION:
+  Predicted Outcome: ${predictionResult.prediction}
+  `;
+  
+      // Add clinical report context if available
       if (clinicalReport) {
         prompt += `\nCLINICAL REPORT SUMMARY:
-The generated clinical report includes a detailed analysis of the prediction results, with sections on Executive Summary, Key Factors Analysis, Recommendations, and RNA/DNA Analysis.
-`
+  The generated clinical report includes details about success/failure factors, recommendations, and RNA/DNA analysis.
+  `;
       }
-
-      // Add user query to prompt
-      prompt += `\nUSER QUERY:
-${userMessage}
-
-Please provide a helpful, informative response that addresses the user's question based on the clinical trial data and prediction results. If relevant, reference insights from the clinical report.`
-
-      // Call Gemini API
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-        }),
-      })
-
+      
+      // Add conversation history for context
+      const recentMessages = messages.slice(-4); // Last 4 messages for context
+      if (recentMessages.length > 0) {
+        prompt += "\nRECENT CONVERSATION:\n";
+        recentMessages.forEach(msg => {
+          prompt += `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}\n`;
+        });
+      }
+  
+      // Add the current user query
+      prompt += `\nUser: ${userMessage}\n\nAssistant:`;
+  
+      // Call our Next.js API route for Gemini
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+  
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
-
-      const data = await response.json()
-      const geminiResponse = data?.contents?.[0]?.parts?.[0]?.text || "I couldn't generate a response. Please try again."
-
-      setMessages((prev) => [...prev, { role: "assistant", content: geminiResponse }])
+      
+      const data = await response.json();
+      setMessages((prev) => [...prev, { 
+        role: "assistant", 
+        content: data.response 
+      }]);
     } catch (err: any) {
-      console.error("Error calling Gemini API:", err)
-      setError(err.message || "An error occurred")
+      console.error("Error calling Gemini API:", err);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "I'm sorry, I encountered an error processing your request. Please try again later." },
-      ])
+        { 
+          role: "assistant", 
+          content: "I'm sorry, I encountered an error. Please try again later." 
+        },
+      ]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-[500px] border rounded-lg overflow-hidden">

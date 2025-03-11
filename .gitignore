@@ -1,5 +1,5 @@
 venv
-.env.local
+frontend/.env.local
 data/label_encoders.pkl
 app/__pycache__
 app/__pycache__/main.cpython-312.pyc
